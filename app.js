@@ -1,10 +1,13 @@
 const express = require("express");
+const app = express();
 require("express-async-errors");
 require("dotenv").config(); // to load the .env file into the process.env object
-
-const app = express();
+const csrf = require("host-csrf");
+const cookieParser = require("cookie-parser");
+const auth = require("./middleware/auth.js");
 
 app.set("view engine", "ejs");
+
 app.use(require("body-parser").urlencoded({ extended: true }));
 
 const session = require("express-session");
@@ -27,9 +30,19 @@ const sessionParms = {
   cookie: { secure: false, sameSite: "strict" },
 };
 
+const csrfOptions = {
+  protected_operations: ["POST"],
+  protected_content_types: [
+    "application/json",
+    "application/x-www-form-urlencoded",
+  ],
+  development_mode: true,
+};
+
 if (app.get("env") === "production") {
   app.set("trust proxy", 1); // trust first proxy
   sessionParms.cookie.secure = true; // serve secure cookies
+  csrfOptions.development_mode = false;
 }
 
 app.use(session(sessionParms));
@@ -44,17 +57,23 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 app.use(require("./middleware/storeLocals.js"));
-app.get("/", (req, res) => {
-  res.render("index");
-});
+
 app.use("/sessions", require("./routes/sessionRoutes.js"));
 
+app.use(cookieParser(process.env.SESSION_SECRET));
+const csrfMiddleware = csrf(csrfOptions);
+app.use(csrfMiddleware);
+
+app.get("/", (req, res) => {
+  csrf.token(req, res);
+  res.render("index");
+});
+
 //secret word handling.
-//let secretWord = "syzygy";
+
 const secretWordRouter = require("./routes/secretWord.js");
-app.use("/secretWord", secretWordRouter);
-const auth = require("./middleware/auth.js");
-app.use("/secretWord", auth, secretWordRouter);
+
+app.use("/secretWord", csrfMiddleware, auth, secretWordRouter);
 
 app.use((req, res) => {
   res.status(404).send(`That page (${req.url}) was not found.`);
