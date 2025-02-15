@@ -5,10 +5,23 @@ require("dotenv").config(); // to load the .env file into the process.env object
 const csrf = require("host-csrf");
 const cookieParser = require("cookie-parser");
 const auth = require("./middleware/auth.js");
+const jobsRouter = require("./routes/jobs.js");
+const helmet = require("helmet");
+const xss = require("xss-clean");
+const rateLimiter = require("express-rate-limit");
 
 app.set("view engine", "ejs");
 
 app.use(require("body-parser").urlencoded({ extended: true }));
+app.use(helmet());
+app.use(xss());
+
+app.use(
+  rateLimiter({
+    windowMs: 60 * 1000, //1 minutes
+    max: 60, //limit each IP to 100 requests per windowMs
+  })
+);
 
 const session = require("express-session");
 const MongoDBStore = require("connect-mongodb-session")(session);
@@ -74,6 +87,7 @@ app.get("/", (req, res) => {
 const secretWordRouter = require("./routes/secretWord.js");
 
 app.use("/secretWord", csrfMiddleware, auth, secretWordRouter);
+app.use("/jobs", csrfMiddleware, auth, jobsRouter);
 
 app.use((req, res) => {
   res.status(404).send(`That page (${req.url}) was not found.`);
