@@ -1,0 +1,64 @@
+<%- include("partials/head.ejs") %> 
+<%- include("partials/header.ejs") %> 
+
+<% if (job) { %>
+    <form method="POST" action="/jobs/update/<%= job.id %>">
+        <div>
+            <label name="company">Company: </label>
+            <input name="company" value="<%= job.company %>" />
+        </div>
+
+        <div>
+            <label name="position">Position: </label>
+            <input name="position" value="<%= job.position %>" />
+        </div>
+
+        <div>
+            <label for="status">Status: </label>
+          <select id="status">
+            <option value="pending">Pending</option>
+            <option value="interview">Interview</option>
+            <option value="declined">Declined</option>
+          </select>
+        </div>
+
+        <div>
+            <button>Edit job</button>
+            <a href="/jobs">
+                <button type="button">Cancel</button>
+            </a>
+        </div>
+        <input  type="hidden" name="_csrf" value="<%= _csrf %>" />
+        
+    </form>
+<% } else { %>
+    <form method="POST" action="/jobs">
+        <div>
+            <label name="company">Company: </label>
+            <input name="company" />
+        </div>
+
+        <div>
+            <label name="position">Position: </label>
+            <input name="position" />
+        </div>
+
+        <div>
+            <label for="status">Status: </label>
+          <select id="status">
+            <option value="pending">Pending</option>
+            <option value="interview">Interview</option>
+            <option value="declined">Declined</option>
+          </select>
+        </div>
+        <div>
+            <button>Submit job</button>
+            <a href="/jobs">
+                <button type="button">Cancel</button>
+            </a>
+        </div>
+        <input type="hidden" name="_csrf" value="<%= _csrf %>" />
+    </form>
+    <% } %>
+
+<%-include("partials/footer.ejs") %>
