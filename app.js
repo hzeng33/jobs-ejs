@@ -25,10 +25,13 @@ app.use(
 
 const session = require("express-session");
 const MongoDBStore = require("connect-mongodb-session")(session);
-const url = process.env.MONGO_URI;
+let mongoURL = process.env.MONGO_URI;
+if (process.env.NODE_ENV == "test") {
+  mongoURL = process.env.MONGO_URI_TEST;
+}
 
 const store = new MongoDBStore({
-  uri: url,
+  uri: mongoURL,
   collection: "mySessions",
 });
 store.on("error", function (error) {
@@ -77,6 +80,15 @@ app.use(cookieParser(process.env.SESSION_SECRET));
 const csrfMiddleware = csrf(csrfOptions);
 app.use(csrfMiddleware);
 
+app.use((req, res, next) => {
+  if (req.path == "/multiply") {
+    res.set("Content-Type", "application/json");
+  } else {
+    res.set("Content-Type", "text/html");
+  }
+  next();
+});
+
 app.get("/", (req, res) => {
   csrf.token(req, res);
   res.render("index");
@@ -89,6 +101,16 @@ const secretWordRouter = require("./routes/secretWord.js");
 app.use("/secretWord", csrfMiddleware, auth, secretWordRouter);
 app.use("/jobs", csrfMiddleware, auth, jobsRouter);
 
+app.get("/multiply", (req, res) => {
+  const result = req.query.first * req.query.second;
+  if (result.isNaN) {
+    result = "NaN";
+  } else if (result == null) {
+    result = "null";
+  }
+  res.json({ result: result });
+});
+
 app.use((req, res) => {
   res.status(404).send(`That page (${req.url}) was not found.`);
 });
@@ -100,9 +122,9 @@ app.use((err, req, res, next) => {
 
 const port = process.env.PORT || 3000;
 
-const start = async () => {
+const start = () => {
   try {
-    await require("./db/connect")(process.env.MONGO_URI);
+    require("./db/connect")(mongoURL);
     app.listen(port, () =>
       console.log(`Server is listening on port ${port}...`)
     );
@@ -112,3 +134,5 @@ const start = async () => {
 };
 
 start();
+
+module.exports = { app };
